@@ -410,28 +410,17 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 				fmt.Printf("--- a/%s\n", diff.Statistic.OldPath)
 				fmt.Printf("+++ b/%s\n", diff.Statistic.NewPath)
 
-				// Output diff content
-				inHunk := false
+				// Output diff content with proper prefixes
 				for _, line := range diff.Content.Text {
 					switch line.Type {
 					case "match":
-						if inHunk {
-							fmt.Println(line.LineContent)
-						}
+						fmt.Printf(" %s\n", line.LineContent)
 					case "old":
-						if !inHunk {
-							inHunk = true
-						}
-						fmt.Println(line.LineContent)
+						fmt.Printf("-%s\n", line.LineContent)
 					case "new":
-						if !inHunk {
-							inHunk = true
-						}
-						fmt.Println(line.LineContent)
+						fmt.Printf("+%s\n", line.LineContent)
 					default:
-						if inHunk {
-							fmt.Println(line.LineContent)
-						}
+						fmt.Println(line.LineContent)
 					}
 				}
 			}
