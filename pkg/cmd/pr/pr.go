@@ -13,6 +13,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func buildPRListPath(owner, repo, state string, limit int) string {
+	return fmt.Sprintf("/repos/%s/%s/pulls?state=%s&per_page=%d", owner, repo, state, limit)
+}
+
 func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pr",
@@ -64,7 +68,7 @@ func newCmdPRList(f *cmdutil.Factory) *cobra.Command {
 			owner, repo = parts[0], parts[1]
 
 			var prs []api.PullRequest
-			path := fmt.Sprintf("/repos/%s/%s/pulls?state=%s", owner, repo, opts.State)
+			path := buildPRListPath(owner, repo, opts.State, opts.Limit)
 			if err := client.Get(path, &prs); err != nil {
 				return err
 			}
