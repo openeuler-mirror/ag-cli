@@ -72,3 +72,17 @@ func TestNormalizePRHeadExpandsOwnerBranchWithSlash(t *testing.T) {
 		t.Fatalf("unexpected normalized head: got %q want %q", got, want)
 	}
 }
+
+func TestValidatePRCreateOptionsRequiresTitle(t *testing.T) {
+	err := validatePRCreateOptions("", "papertager:feature")
+	if err == nil || err.Error() != "title is required" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidatePRCreateOptionsRequiresHead(t *testing.T) {
+	err := validatePRCreateOptions("test", "")
+	if err == nil || err.Error() != "head is required" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

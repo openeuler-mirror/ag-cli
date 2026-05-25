@@ -2,6 +2,7 @@ package pr
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,6 +33,16 @@ func normalizePRHead(repo, head string) string {
 	}
 
 	return fmt.Sprintf("%s/%s:%s", headParts[0], repo, headParts[1])
+}
+
+func validatePRCreateOptions(title, head string) error {
+	if title == "" {
+		return errors.New("title is required")
+	}
+	if head == "" {
+		return errors.New("head is required")
+	}
+	return nil
 }
 
 func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
@@ -201,8 +212,8 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo = parts[0], parts[1]
 
-			if opts.Title == "" {
-				return fmt.Errorf("title is required")
+			if err := validatePRCreateOptions(opts.Title, opts.Head); err != nil {
+				return err
 			}
 			head := normalizePRHead(repo, opts.Head)
 
