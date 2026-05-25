@@ -21,6 +21,19 @@ func buildPRFilesPath(owner, repo, number string) string {
 	return fmt.Sprintf("/repos/%s/%s/pulls/%s/files", owner, repo, number)
 }
 
+func normalizePRHead(repo, head string) string {
+	if !strings.Contains(head, ":") {
+		return head
+	}
+
+	headParts := strings.SplitN(head, ":", 2)
+	if strings.Contains(headParts[0], "/") {
+		return head
+	}
+
+	return fmt.Sprintf("%s/%s:%s", headParts[0], repo, headParts[1])
+}
+
 func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pr",
@@ -191,12 +204,7 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 			if opts.Title == "" {
 				return fmt.Errorf("title is required")
 			}
-			head := opts.Head
-			// Convert owner:branch format to owner/repo:branch for AtomGit API
-			if strings.Contains(head, ":") && !strings.Contains(head, "/") {
-				headParts := strings.SplitN(head, ":", 2)
-				head = fmt.Sprintf("%s/%s:%s", headParts[0], repo, headParts[1])
-			}
+			head := normalizePRHead(repo, opts.Head)
 
 			body := map[string]interface{}{
 				"title": opts.Title,

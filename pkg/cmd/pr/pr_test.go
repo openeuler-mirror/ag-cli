@@ -54,3 +54,21 @@ func TestRenderPRDiffRejectsNonArray(t *testing.T) {
 		t.Fatal("expected error for legacy object payload")
 	}
 }
+
+func TestNormalizePRHeadKeepsRepoQualifiedHead(t *testing.T) {
+	got := normalizePRHead("ag-cli", "papertager/ag-cli:feature/x")
+	want := "papertager/ag-cli:feature/x"
+
+	if got != want {
+		t.Fatalf("unexpected normalized head: got %q want %q", got, want)
+	}
+}
+
+func TestNormalizePRHeadExpandsOwnerBranchWithSlash(t *testing.T) {
+	got := normalizePRHead("ag-cli", "papertager:feature/x")
+	want := "papertager/ag-cli:feature/x"
+
+	if got != want {
+		t.Fatalf("unexpected normalized head: got %q want %q", got, want)
+	}
+}
