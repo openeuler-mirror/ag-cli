@@ -41,9 +41,19 @@ The repository argument can be:
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repoURL := args[0]
+			currentUser := ""
+
+			if !strings.Contains(repoURL, "/") && !strings.HasPrefix(repoURL, "http://") &&
+				!strings.HasPrefix(repoURL, "https://") && !strings.HasPrefix(repoURL, "git@") {
+				user, err := f.Config.GetUser()
+				if err != nil {
+					return fmt.Errorf("failed to get current user for bare repository name: %w", err)
+				}
+				currentUser = user
+			}
 
 			// Parse repository argument
-			cloneURL, repoName := parseRepoArg(repoURL)
+			cloneURL, repoName := parseRepoArg(repoURL, currentUser)
 
 			// Determine target directory
 			targetDir := repoName
@@ -61,7 +71,7 @@ The repository argument can be:
 	return cmd
 }
 
-func parseRepoArg(arg string) (cloneURL, repoName string) {
+func parseRepoArg(arg, currentUser string) (cloneURL, repoName string) {
 	// Full URL
 	if strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://") {
 		cloneURL = arg
@@ -89,8 +99,8 @@ func parseRepoArg(arg string) (cloneURL, repoName string) {
 		cloneURL = fmt.Sprintf("https://atomgit.com/%s/%s.git", parts[0], parts[1])
 		repoName = parts[1]
 	} else {
-		// Just repo name - will need current user
-		cloneURL = fmt.Sprintf("https://atomgit.com/%s", arg)
+		// Just repo name - use current user as owner
+		cloneURL = fmt.Sprintf("https://atomgit.com/%s/%s.git", currentUser, arg)
 		repoName = arg
 	}
 
