@@ -31,7 +31,8 @@ type config struct {
 func NewConfig() (Config, error) {
 	token, user, err := loadTokenFromFile()
 	if err != nil {
-		return nil, err
+		token = ""
+		user = ""
 	}
 
 	return &config{
@@ -44,6 +45,11 @@ func NewConfig() (Config, error) {
 func (c *config) GetToken() (string, error) {
 	if c.token != "" {
 		return c.token, nil
+	}
+
+	if token := loadTokenFromEnv(); token != "" {
+		c.token = token
+		return token, nil
 	}
 
 	token, _, err := loadTokenFromFile()
@@ -99,6 +105,14 @@ func loadTokenFromFile() (string, string, error) {
 	}
 
 	return "", "", fmt.Errorf("token file not found.\nSearched locations:\n  - %s", strings.Join(failedPaths, "\n  - "))
+}
+
+func loadTokenFromEnv() string {
+	if token := strings.TrimSpace(os.Getenv("ATOMGIT_TOKEN")); token != "" {
+		return token
+	}
+
+	return strings.TrimSpace(os.Getenv("GITCODE_TOKEN"))
 }
 
 // getTokenFilePaths returns candidate token file paths in search priority order.
