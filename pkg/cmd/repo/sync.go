@@ -213,18 +213,21 @@ func validateSyncOptions(opts *SyncOptions) error {
 }
 
 func buildAtomGitCloneURL(repo string) (string, error) {
-	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") || strings.HasPrefix(repo, "git@") {
+	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
 		if strings.HasSuffix(repo, ".git") {
 			return repo, nil
 		}
 		return repo + ".git", nil
+	}
+	if strings.HasPrefix(repo, "git@") {
+		return repo, nil
 	}
 
 	parts := strings.Split(repo, "/")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return "", fmt.Errorf("invalid upstream repository format: %s (expected owner/repo)", repo)
 	}
-	return fmt.Sprintf("https://atomgit.com/%s/%s.git", parts[0], parts[1]), nil
+	return fmt.Sprintf("https://atomgit.com/%s/%s.git", parts[0], strings.TrimSuffix(parts[1], ".git")), nil
 }
 
 func ensureUpstreamRemote(r commandRunner, remote, url string, dryRun bool) error {

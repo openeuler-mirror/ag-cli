@@ -48,6 +48,11 @@ func TestBuildAtomGitCloneURL(t *testing.T) {
 			want: "https://atomgit.com/openeuler/ag-cli.git",
 		},
 		{
+			name: "owner repo with suffix",
+			in:   "openeuler/ag-cli.git",
+			want: "https://atomgit.com/openeuler/ag-cli.git",
+		},
+		{
 			name: "https url without suffix",
 			in:   "https://atomgit.com/openeuler/ag-cli",
 			want: "https://atomgit.com/openeuler/ag-cli.git",
@@ -61,6 +66,11 @@ func TestBuildAtomGitCloneURL(t *testing.T) {
 			name: "ssh url",
 			in:   "git@atomgit.com:openeuler/ag-cli.git",
 			want: "git@atomgit.com:openeuler/ag-cli.git",
+		},
+		{
+			name: "ssh url without suffix",
+			in:   "git@atomgit.com:openeuler/ag-cli",
+			want: "git@atomgit.com:openeuler/ag-cli",
 		},
 	}
 
