@@ -43,7 +43,7 @@ func (shellRunner) Run(name string, args ...string) (string, error) {
 		if msg == "" {
 			msg = err.Error()
 		}
-		return "", fmt.Errorf("%s", msg)
+		return "", fmt.Errorf("%s: %w", msg, err)
 	}
 	return strings.TrimSpace(stdout.String()), nil
 }
