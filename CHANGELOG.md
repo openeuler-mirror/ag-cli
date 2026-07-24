@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release of AtomGit CLI
 - Authentication commands: `auth status`, `auth token`
 - Repository commands: `repo list`, `repo view`, `repo create`, `repo clone`, `repo fork`, `repo delete`
+- Repository sync command: `repo sync` for keeping fork branches up to date with upstream repositories
 - Pull Request commands: `pr list`, `pr view`, `pr create`
 - Issue commands: `issue list`, `issue view`, `issue create`
 - SSH Key commands: `ssh-key add`
@@ -30,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Create new repositories (public/private)
 - Clone repositories with optional branch selection
 - Fork repositories with custom name and visibility
+- Sync fork branches from an upstream remote with dry-run, fast-forward, merge, rebase, and optional push support
 - Delete repositories with confirmation prompt
 
 #### Pull Request Management
