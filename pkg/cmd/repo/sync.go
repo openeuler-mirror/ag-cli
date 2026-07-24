@@ -113,7 +113,7 @@ func runSync(r commandRunner, opts *SyncOptions, upstreamRepo string) error {
 	}
 
 	if _, err := r.Run("git", "rev-parse", "--git-dir"); err != nil {
-		return fmt.Errorf("not a git repository")
+		return fmt.Errorf("not a git repository: %w", err)
 	}
 
 	branch := opts.Branch
