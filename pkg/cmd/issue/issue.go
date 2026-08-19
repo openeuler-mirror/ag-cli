@@ -1,6 +1,7 @@
 package issue
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -21,7 +22,76 @@ func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd.AddCommand(newCmdIssueView(f))
 	cmd.AddCommand(newCmdIssueCreate(f))
 	cmd.AddCommand(newCmdIssueClose(f))
+	cmd.AddCommand(newCmdIssuePRs(f))
 	cmd.AddCommand(comment.NewCmdComment(f))
+
+	return cmd
+}
+
+func newCmdIssuePRs(f *cmdutil.Factory) *cobra.Command {
+	var opts struct {
+		JSON bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "prs [<owner>/]<repo> <number>",
+		Short: "View linked pull requests of an issue",
+		Long:  `View all pull requests linked to an issue.`,
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := f.Config.GetToken()
+			if err != nil {
+				return fmt.Errorf("not authenticated: %w", err)
+			}
+
+			var owner, repo string
+			var number string
+
+			if len(args) == 1 {
+				return fmt.Errorf("repository and issue number required")
+			}
+
+			parts := strings.Split(args[0], "/")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid repository format: %s (expected owner/repo)", args[0])
+			}
+			owner, repo = parts[0], parts[1]
+
+			number = args[1]
+
+			client := api.NewClient(token)
+
+			// Get linked pull requests using GET method
+			var prs []api.PullRequest
+			path := fmt.Sprintf("/repos/%s/%s/issues/%s/pull_requests", owner, repo, number)
+			if err := client.Get(path, &prs); err != nil {
+				return err
+			}
+
+			if opts.JSON {
+				data, err := json.MarshalIndent(prs, "", "  ")
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(data))
+				return nil
+			}
+
+			if len(prs) == 0 {
+				fmt.Printf("Issue #%s has no linked pull requests\n", number)
+				return nil
+			}
+
+			fmt.Printf("Issue #%s linked pull requests:\n", number)
+			for _, pr := range prs {
+				fmt.Printf("  #%s %s [%s]\n", pr.GetNumber(), pr.Title, pr.State)
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output raw JSON")
 
 	return cmd
 }
