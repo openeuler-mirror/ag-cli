@@ -89,9 +89,19 @@ ag repo clone owner/repo --branch develop
 ag repo fork owner/repo
 ag repo fork owner/repo --name my-fork --public
 
+# 同步 fork 分支
+ag repo sync owner/repo --dry-run
+ag repo sync owner/repo --branch develop --strategy rebase --push
+
 # 删除仓库
 ag repo delete owner/repo --yes
 ```
+
+`repo sync` 用于在本地 fork 仓库中同步上游分支。默认同步当前分支，使用 `ff-only`
+策略避免意外产生合并提交；需要线性历史时可以使用 `--strategy rebase`，需要保留合并
+节点时可以使用 `--strategy merge`。传入 `owner/repo` 时，命令会自动维护 `upstream`
+remote；也可以通过 `--upstream-remote` 使用已有 remote。加上 `--dry-run` 可以先查看
+将执行的操作，加上 `--push` 可以同步后推送到 fork remote。
 
 ### Pull Request (pr)
 

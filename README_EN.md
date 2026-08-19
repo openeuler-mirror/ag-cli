@@ -71,9 +71,21 @@ ag repo clone owner/repo --branch develop
 ag repo fork owner/repo
 ag repo fork owner/repo --name my-fork --public
 
+# Sync a fork branch.
+ag repo sync owner/repo --dry-run
+ag repo sync owner/repo --branch develop --strategy rebase --push
+
 # Delete a repository.
 ag repo delete owner/repo --yes
 ```
+
+`repo sync` synchronizes a local fork branch with an upstream repository. It uses
+the current branch by default and applies `ff-only` to avoid unintended merge
+commits. Use `--strategy rebase` for linear history, or `--strategy merge` when
+a merge commit is preferred. When `owner/repo` is provided, the command adds or
+updates the `upstream` remote automatically. Existing remote names can be reused
+with `--upstream-remote`. Use `--dry-run` to inspect the plan first, and `--push`
+to update the fork remote after a successful sync.
 
 ### Pull Request (PR)
 
