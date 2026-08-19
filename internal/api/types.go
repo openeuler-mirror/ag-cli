@@ -197,3 +197,41 @@ type TagRequest struct {
 	Message string `json:"message"`
 	Refs    string `json:"refs"`
 }
+
+// Release represents a repository release
+type Release struct {
+	ID          int64          `json:"id"`
+	TagName     string         `json:"tag_name"`
+	Name        string         `json:"name"`
+	Body        string         `json:"body"`
+	Draft       bool           `json:"draft"`
+	Prerelease  bool           `json:"prerelease"`
+	HTMLURL     string         `json:"html_url"`
+	ZipballURL  string         `json:"zipball_url"`
+	TarballURL  string         `json:"tarball_url"`
+	Author      User           `json:"author"`
+	CreatedAt   string         `json:"created_at"`
+	PublishedAt string         `json:"published_at"`
+	Assets      []ReleaseAsset `json:"assets"`
+}
+
+// ReleaseAsset represents a release attachment
+type ReleaseAsset struct {
+	ID                 int64  `json:"id"`
+	Name               string `json:"name"`
+	Label              string `json:"label"`
+	ContentType        string `json:"content_type"`
+	Size               int64  `json:"size"`
+	DownloadCount      int    `json:"download_count"`
+	BrowserDownloadURL string `json:"browser_download_url"`
+}
+
+// CreateReleaseRequest represents the request body for creating a release
+type CreateReleaseRequest struct {
+	TagName         string `json:"tag_name"`
+	Name            string `json:"name"`
+	Body            string `json:"body"`
+	TargetCommitish string `json:"target_commitish,omitempty"`
+	Draft           bool   `json:"draft,omitempty"`
+	Prerelease      bool   `json:"prerelease,omitempty"`
+}
