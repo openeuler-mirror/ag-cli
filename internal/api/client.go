@@ -21,8 +21,12 @@ type Client struct {
 }
 
 func NewClient(token string) *Client {
+	return newClientWithBaseURL(BaseURL+APIVersion, token)
+}
+
+func newClientWithBaseURL(baseURL, token string) *Client {
 	return &Client{
-		baseURL: BaseURL + APIVersion,
+		baseURL: baseURL,
 		token:   token,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -58,6 +62,24 @@ func (c *Client) Get(path string, result interface{}) error {
 	}
 
 	return json.NewDecoder(resp.Body).Decode(result)
+}
+
+func (c *Client) GetRaw(path string) ([]byte, error) {
+	resp, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("API error: %s - %s (failed to read response body: %w)", resp.Status, string(body), readErr)
+		}
+		return nil, fmt.Errorf("API error: %s - %s", resp.Status, string(body))
+	}
+
+	return io.ReadAll(resp.Body)
 }
 
 func (c *Client) Post(path string, body, result interface{}) error {

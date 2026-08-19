@@ -5,6 +5,7 @@ import (
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/issue"
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/license"
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/pr"
+	"atomgit.com/openeuler/ag-cli/pkg/cmd/release"
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/repo"
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/ssh-key"
 	"atomgit.com/openeuler/ag-cli/pkg/cmd/tag"
@@ -26,6 +27,7 @@ func NewCmdRoot(f *cmdutil.Factory) (*cobra.Command, error) {
 	cmd.AddCommand(pr.NewCmdPR(f))
 	cmd.AddCommand(issue.NewCmdIssue(f))
 	cmd.AddCommand(tag.NewCmdTag(f))
+	cmd.AddCommand(release.NewCmdRelease(f))
 	cmd.AddCommand(auth.NewCmdAuth(f))
 	cmd.AddCommand(key.NewCmdSSHKey(f))
 	cmd.AddCommand(license.NewCmdLicense(f))

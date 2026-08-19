@@ -2,9 +2,10 @@ package pr
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"net/http"
+	"os"
 	"strings"
 
 	"atomgit.com/openeuler/ag-cli/internal/api"
@@ -15,6 +16,33 @@ import (
 
 func buildPRListPath(owner, repo, state string, limit int) string {
 	return fmt.Sprintf("/repos/%s/%s/pulls?state=%s&per_page=%d", owner, repo, state, limit)
+}
+
+func buildPRFilesPath(owner, repo, number string) string {
+	return fmt.Sprintf("/repos/%s/%s/pulls/%s/files", owner, repo, number)
+}
+
+func normalizePRHead(repo, head string) string {
+	if !strings.Contains(head, ":") {
+		return head
+	}
+
+	headParts := strings.SplitN(head, ":", 2)
+	if strings.Contains(headParts[0], "/") {
+		return head
+	}
+
+	return fmt.Sprintf("%s/%s:%s", headParts[0], repo, headParts[1])
+}
+
+func validatePRCreateOptions(title, head string) error {
+	if title == "" {
+		return errors.New("title is required")
+	}
+	if head == "" {
+		return errors.New("head is required")
+	}
+	return nil
 }
 
 func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
@@ -184,15 +212,10 @@ func newCmdPRCreate(f *cmdutil.Factory) *cobra.Command {
 			}
 			owner, repo = parts[0], parts[1]
 
-			if opts.Title == "" {
-				return fmt.Errorf("title is required")
+			if err := validatePRCreateOptions(opts.Title, opts.Head); err != nil {
+				return err
 			}
-			head := opts.Head
-			// Convert owner:branch format to owner/repo:branch for AtomGit API
-			if strings.Contains(head, ":") && !strings.Contains(head, "/") {
-				headParts := strings.SplitN(head, ":", 2)
-				head = fmt.Sprintf("%s/%s:%s", headParts[0], repo, headParts[1])
-			}
+			head := normalizePRHead(repo, opts.Head)
 
 			body := map[string]interface{}{
 				"title": opts.Title,
@@ -363,22 +386,8 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 
 			number = args[1]
 
-			client := &http.Client{}
-			url := fmt.Sprintf("https://api.gitcode.com/api/v5/repos/%s/%s/pulls/%s/files.json", owner, repo, number)
-			req, err := http.NewRequest("GET", url, nil)
-			if err != nil {
-				return err
-			}
-			req.Header.Add("Authorization", "Bearer "+token)
-			req.Header.Add("Accept", "application/json")
-
-			res, err := client.Do(req)
-			if err != nil {
-				return err
-			}
-			defer res.Body.Close()
-
-			body, err := io.ReadAll(res.Body)
+			client := api.NewClient(token)
+			body, err := client.GetRaw(buildPRFilesPath(owner, repo, number))
 			if err != nil {
 				return err
 			}
@@ -388,59 +397,57 @@ func newCmdPRDiff(f *cmdutil.Factory) *cobra.Command {
 				return nil
 			}
 
-			// Parse and format as patch
-			var diffData struct {
-				Code  int `json:"code"`
-				Diffs []struct {
-					Statistic struct {
-						Path    string `json:"path"`
-						OldPath string `json:"old_path"`
-						NewPath string `json:"new_path"`
-					} `json:"statistic"`
-					AddedLines  int `json:"added_lines"`
-					RemoveLines int `json:"remove_lines"`
-					Content     struct {
-						Text []struct {
-							LineContent string `json:"line_content"`
-							Type        string `json:"type"`
-						} `json:"text"`
-					} `json:"content"`
-				} `json:"diffs"`
-			}
-
-			if err := json.Unmarshal(body, &diffData); err != nil {
-				return fmt.Errorf("failed to parse diff: %w", err)
-			}
-
-			for i, diff := range diffData.Diffs {
-				if i > 0 {
-					fmt.Println()
-				}
-
-				fmt.Printf("diff --git a/%s b/%s\n", diff.Statistic.OldPath, diff.Statistic.NewPath)
-				fmt.Printf("--- a/%s\n", diff.Statistic.OldPath)
-				fmt.Printf("+++ b/%s\n", diff.Statistic.NewPath)
-
-				// Output diff content with proper prefixes
-				for _, line := range diff.Content.Text {
-					switch line.Type {
-					case "match":
-						fmt.Printf(" %s\n", line.LineContent)
-					case "old":
-						fmt.Printf("-%s\n", line.LineContent)
-					case "new":
-						fmt.Printf("+%s\n", line.LineContent)
-					default:
-						fmt.Println(line.LineContent)
-					}
-				}
-			}
-
-			return nil
+			return renderPRDiff(body, os.Stdout)
 		},
 	}
 
 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "Output raw JSON")
 
 	return cmd
+}
+
+type prFile struct {
+	Filename  string `json:"filename"`
+	Additions int    `json:"additions"`
+	Deletions int    `json:"deletions"`
+	Patch     struct {
+		OldPath string `json:"old_path"`
+		NewPath string `json:"new_path"`
+		Diff    string `json:"diff"`
+	} `json:"patch"`
+}
+
+func renderPRDiff(body []byte, w io.Writer) error {
+	var files []prFile
+	if err := json.Unmarshal(body, &files); err != nil {
+		return fmt.Errorf("failed to parse diff: %w", err)
+	}
+
+	for i, file := range files {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+
+		oldPath := file.Patch.OldPath
+		if oldPath == "" {
+			oldPath = file.Filename
+		}
+		newPath := file.Patch.NewPath
+		if newPath == "" {
+			newPath = file.Filename
+		}
+
+		fmt.Fprintf(w, "diff --git a/%s b/%s\n", oldPath, newPath)
+		fmt.Fprintf(w, "--- a/%s\n", oldPath)
+		fmt.Fprintf(w, "+++ b/%s\n", newPath)
+		if file.Patch.Diff == "" {
+			continue
+		}
+		fmt.Fprint(w, file.Patch.Diff)
+		if !strings.HasSuffix(file.Patch.Diff, "\n") {
+			fmt.Fprintln(w)
+		}
+	}
+
+	return nil
 }
