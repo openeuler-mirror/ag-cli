@@ -31,27 +31,32 @@ func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 }
 
 func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
-	opts := &ListOptions{}
+	opts := &ListOptions{
+		Limit: 30,
+	}
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List repositories",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := f.Config.GetToken()
 			if err != nil {
 				return fmt.Errorf("not authenticated. Please check your token file: %w", err)
 			}
 
-			client := api.NewClient(token)
+			if opts.Limit <= 0 {
+				return fmt.Errorf("invalid limit: %d (must be positive)", opts.Limit)
+			}
 
-			var repos []api.Repository
-			path := "/user/repos"
-			if err := client.Get(path, &repos); err != nil {
+			client := api.NewClient(token)
+			repos, err := listRepos(client, opts.Limit)
+			if err != nil {
 				return err
 			}
 
 			for _, repo := range repos {
-				fmt.Printf("%s/%s\n", repo.Owner.Login, repo.Name)
+				fmt.Println(repositoryListName(repo))
 			}
 
 			return nil
@@ -61,6 +66,39 @@ func newCmdRepoList(f *cmdutil.Factory) *cobra.Command {
 	cmd.Flags().IntVarP(&opts.Limit, "limit", "L", 30, "Maximum number of repositories to list")
 
 	return cmd
+}
+
+func listRepos(client *api.Client, limit int) ([]api.Repository, error) {
+	const maxPerPage = 100
+
+	var repos []api.Repository
+	for page := 1; len(repos) < limit; page++ {
+		var pageRepos []api.Repository
+		path := fmt.Sprintf("/user/repos?page=%d&per_page=%d", page, maxPerPage)
+		if err := client.Get(path, &pageRepos); err != nil {
+			return nil, err
+		}
+		if len(pageRepos) == 0 {
+			break
+		}
+
+		repos = append(repos, pageRepos...)
+		if len(pageRepos) < maxPerPage {
+			break
+		}
+	}
+
+	if len(repos) > limit {
+		repos = repos[:limit]
+	}
+	return repos, nil
+}
+
+func repositoryListName(repo api.Repository) string {
+	if repo.FullName != "" {
+		return repo.FullName
+	}
+	return fmt.Sprintf("%s/%s", repo.Owner.Login, repo.Name)
 }
 
 func newCmdRepoView(f *cmdutil.Factory) *cobra.Command {
