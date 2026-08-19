@@ -11,6 +11,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func buildIssueListPath(owner, repo, state string, limit int) string {
+	return fmt.Sprintf("/repos/%s/%s/issues?state=%s&per_page=%d", owner, repo, state, limit)
+}
+
 func NewCmdIssue(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "issue",
@@ -171,7 +175,7 @@ func newCmdIssueList(f *cmdutil.Factory) *cobra.Command {
 			owner, repo = parts[0], parts[1]
 
 			var issues []api.Issue
-			path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, opts.State)
+			path := buildIssueListPath(owner, repo, opts.State, opts.Limit)
 			if err := client.Get(path, &issues); err != nil {
 				return err
 			}
