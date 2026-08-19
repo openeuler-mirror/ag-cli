@@ -40,7 +40,8 @@ func NewConfig() (Config, error) {
 		return &config{host: defaultHost}, nil
 	}
 	if err != nil {
-		return nil, err
+		token = ""
+		user = ""
 	}
 
 	return &config{
@@ -53,6 +54,11 @@ func NewConfig() (Config, error) {
 func (c *config) GetToken() (string, error) {
 	if c.token != "" {
 		return c.token, nil
+	}
+
+	if token := loadTokenFromEnv(); token != "" {
+		c.token = token
+		return token, nil
 	}
 
 	token, _, err := loadTokenFromFile()
@@ -135,6 +141,14 @@ func LoadStoredCredentials() (*StoredCredentials, error) {
 	}
 
 	return nil, fmt.Errorf("%w.\nSearched locations:\n  - %s", ErrTokenNotFound, strings.Join(failedPaths, "\n  - "))
+}
+
+func loadTokenFromEnv() string {
+	if token := strings.TrimSpace(os.Getenv("ATOMGIT_TOKEN")); token != "" {
+		return token
+	}
+
+	return strings.TrimSpace(os.Getenv("GITCODE_TOKEN"))
 }
 
 // getTokenFilePaths returns candidate token file paths in search priority order.
