@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -38,5 +39,19 @@ func TestGetRawErrorsOnNon200(t *testing.T) {
 	c := newClientWithBaseURL(srv.URL, "tok")
 	if _, err := c.GetRaw("/anything"); err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected 500 error, got %v", err)
+	}
+}
+
+type errorTransport struct{}
+
+func (e *errorTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("connection refused")
+}
+
+func TestGetRawNetworkError(t *testing.T) {
+	c := newClientWithBaseURL("http://example.invalid", "tok")
+	c.httpClient = &http.Client{Transport: &errorTransport{}}
+	if _, err := c.GetRaw("/anything"); err == nil {
+		t.Fatal("expected network error")
 	}
 }

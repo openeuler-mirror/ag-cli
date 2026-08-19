@@ -72,7 +72,10 @@ func (c *Client) GetRaw(path string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("API error: %s - %s (failed to read response body: %w)", resp.Status, string(body), readErr)
+		}
 		return nil, fmt.Errorf("API error: %s - %s", resp.Status, string(body))
 	}
 

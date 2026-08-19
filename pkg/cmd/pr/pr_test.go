@@ -49,6 +49,25 @@ func TestRenderPRDiff(t *testing.T) {
 	}
 }
 
+func TestRenderPRDiffUsesPatchPathsWhenPresent(t *testing.T) {
+	body := []byte(`[{"filename":"new_name.txt","additions":0,"deletions":0,` +
+		`"patch":{"old_path":"old_name.txt","new_path":"new_name.txt","diff":"@@ -1 +0,0 @@\n-gone\n"}}]`)
+
+	var buf bytes.Buffer
+	if err := renderPRDiff(body, &buf); err != nil {
+		t.Fatalf("renderPRDiff failed: %v", err)
+	}
+
+	want := "diff --git a/old_name.txt b/new_name.txt\n" +
+		"--- a/old_name.txt\n" +
+		"+++ b/new_name.txt\n" +
+		"@@ -1 +0,0 @@\n-gone\n"
+
+	if buf.String() != want {
+		t.Fatalf("unexpected diff output:\ngot:\n%s\nwant:\n%s", buf.String(), want)
+	}
+}
+
 func TestRenderPRDiffRejectsNonArray(t *testing.T) {
 	if err := renderPRDiff([]byte(`{"code":0,"diffs":[]}`), &bytes.Buffer{}); err == nil {
 		t.Fatal("expected error for legacy object payload")

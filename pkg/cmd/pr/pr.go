@@ -411,7 +411,9 @@ type prFile struct {
 	Additions int    `json:"additions"`
 	Deletions int    `json:"deletions"`
 	Patch     struct {
-		Diff string `json:"diff"`
+		OldPath string `json:"old_path"`
+		NewPath string `json:"new_path"`
+		Diff    string `json:"diff"`
 	} `json:"patch"`
 }
 
@@ -426,9 +428,18 @@ func renderPRDiff(body []byte, w io.Writer) error {
 			fmt.Fprintln(w)
 		}
 
-		fmt.Fprintf(w, "diff --git a/%s b/%s\n", file.Filename, file.Filename)
-		fmt.Fprintf(w, "--- a/%s\n", file.Filename)
-		fmt.Fprintf(w, "+++ b/%s\n", file.Filename)
+		oldPath := file.Patch.OldPath
+		if oldPath == "" {
+			oldPath = file.Filename
+		}
+		newPath := file.Patch.NewPath
+		if newPath == "" {
+			newPath = file.Filename
+		}
+
+		fmt.Fprintf(w, "diff --git a/%s b/%s\n", oldPath, newPath)
+		fmt.Fprintf(w, "--- a/%s\n", oldPath)
+		fmt.Fprintf(w, "+++ b/%s\n", newPath)
 		if file.Patch.Diff == "" {
 			continue
 		}
