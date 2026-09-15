@@ -1,4 +1,5 @@
 # AtomGit CLI (ag)
+English | [简体中文](./README.md)
 
 AtomGit command line tool, developed based on GitHub CLI (gh).
 

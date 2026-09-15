@@ -1,4 +1,5 @@
 # AtomGit CLI (ag)
+简体中文 | [English](./README_EN.md)
 
 AtomGit 命令行工具，参考 GitHub CLI (gh) 开发。
 
