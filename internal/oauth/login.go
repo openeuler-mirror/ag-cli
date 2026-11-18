@@ -150,6 +150,10 @@ func Login(ctx context.Context) (*LoginResult, error) {
 
 	if err := openBrowser(authURL); err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open browser: %v\n", err)
+		if isHarmonyOS() {
+			fmt.Println("HarmonyOS PC detected: no system URL opener available.")
+			fmt.Println("Copy the URL above into your browser manually, then authorize.")
+		}
 	}
 
 	select {
@@ -330,13 +334,44 @@ func fetchUser(ctx context.Context, accessToken string) (*userResponse, error) {
 	return &u, nil
 }
 
+// openBrowser opens the authorization URL in the system browser.
+// On HarmonyOS PC the desktop helper "open <url>" (or "hnp-shell open") is used;
+// xdg-open is kept as a fallback for other Linux systems.
+// isHarmonyOS reports whether the process runs on OpenHarmony/HarmonyOS.
+// The "open" helper alone is ambiguous (some Linux DEs ship the macOS-style
+// run-mailcap "open"), so require a HarmonyOS marker: the ohos param/properties
+// files, /proc/version "HongMeng" kernel, or a working param client.
+func isHarmonyOS() bool {
+	if _, err := os.Stat("/system/etc/param/ohos.para"); err == nil {
+		return true
+	}
+	if b, err := os.ReadFile("/proc/version"); err == nil &&
+		strings.Contains(string(b), "HongMeng") {
+		return true
+	}
+	if p, err := exec.LookPath("param"); err == nil {
+		if out, err := exec.Command(p, "get",
+			"const.product.software.version").Output(); err == nil && len(out) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func openBrowser(rawURL string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
 		cmd = exec.Command("open", rawURL)
 	case "linux":
-		cmd = exec.Command("xdg-open", rawURL)
+		if _, err := exec.LookPath("hnp-shell"); err == nil {
+			cmd = exec.Command("hnp-shell", "open", rawURL)
+		} else if _, err := exec.LookPath("open"); err == nil && isHarmonyOS() {
+			// HarmonyOS PC ships an "open" helper (e.g. in harmonybrew) instead of xdg-open.
+			cmd = exec.Command("open", rawURL)
+		} else {
+			cmd = exec.Command("xdg-open", rawURL)
+		}
 	case "windows":
 		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", rawURL)
 	default:
